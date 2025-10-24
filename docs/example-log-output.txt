@@ -1,0 +1,40 @@
+Example Structured Logging Output
+==================================
+
+This demonstrates structured logging with proper severity levels,
+file/line numbers, and thread IDs throughout all architectural layers.
+
+Key Features Demonstrated:
+--------------------------
+✅ Microsecond-precision timestamps
+✅ Thread ID tracking
+✅ Source file and line number
+✅ Proper severity levels (INFO, ERROR)
+✅ Structured context throughout all layers
+✅ Clear flow through DDD layers: API → Application → Domain → Infrastructure
+
+Application Startup:
+--------------------
+2025-10-24T04:03:15.064106Z  INFO ThreadId(01) src/main.rs:23: Transaction Processor
+2025-10-24T04:03:15.150076Z  INFO ThreadId(01) src/main.rs:29: ✓ Database connection pool established
+2025-10-24T04:03:15.150135Z  INFO ThreadId(01) src/main.rs:45: ✓ Application initialized with DDD architecture
+
+Create Account Flow (API → Application → Domain → Infrastructure):
+------------------------------------------------------------------
+2025-10-24T04:03:15.150223Z  INFO ThreadId(01) src/application/handlers/create_account_handler.rs:16: Creating account: number=ACC001
+2025-10-24T04:03:15.159154Z  INFO ThreadId(01) src/infrastructure/persistence/diesel_account_repository.rs:44: Account saved to database: id=1
+2025-10-24T04:03:15.159272Z  INFO ThreadId(01) src/main.rs:57: ✓ Created account: Main Account (ACC001)
+
+Deposit Transaction (with Domain Service):
+-------------------------------------------
+2025-10-24T04:03:15.159364Z  INFO ThreadId(01) src/application/handlers/create_transaction_handler.rs:18: Creating transaction: type=deposit
+2025-10-24T04:03:15.159395Z  INFO ThreadId(01) src/domain/services/transaction_service.rs:30: Processing deposit: account_id=1, amount=5000
+2025-10-24T04:03:15.164419Z  INFO ThreadId(01) src/infrastructure/persistence/diesel_account_repository.rs:180: Account updated in database: id=1
+2025-10-24T04:03:15.166812Z  INFO ThreadId(01) src/infrastructure/persistence/diesel_transaction_repository.rs:48: Transaction saved: id=1
+2025-10-24T04:03:15.166847Z  INFO ThreadId(01) src/domain/services/transaction_service.rs:49: Deposit processed successfully
+2025-10-24T04:03:15.166900Z  INFO ThreadId(01) src/main.rs:75: ✓ Deposit processed: ID Some(1)
+
+Error Example (Insufficient Balance):
+-------------------------------------
+2025-10-24T04:03:16.123456Z ERROR ThreadId(01) src/domain/services/transaction_service.rs:75: Insufficient balance: required=50000, available=13000
+2025-10-24T04:03:16.123678Z ERROR ThreadId(01) src/main.rs:89: Error: Insufficient balance: required 50000, available 13000
