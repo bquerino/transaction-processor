@@ -1,9 +1,9 @@
 pub mod diesel_account_balance_repository;
 pub mod diesel_account_repository;
 pub mod diesel_ledger_event_repository;
-pub mod diesel_transaction_repository;
+// pub mod diesel_transaction_repository; // Deprecated in favor of event-sourcing
 
 pub use diesel_account_balance_repository::DieselAccountBalanceRepository;
 pub use diesel_account_repository::DieselAccountRepository;
 pub use diesel_ledger_event_repository::DieselLedgerEventRepository;
-pub use diesel_transaction_repository::DieselTransactionRepository;
+// pub use diesel_transaction_repository::DieselTransactionRepository;

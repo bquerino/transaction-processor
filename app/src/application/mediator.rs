@@ -1,43 +1,51 @@
-use crate::application::commands::{CreateAccountCommand, CreateTransactionCommand};
+use crate::application::commands::{
+    CreateAccountCommand, CreateBalanceSnapshotCommand, CreateLedgerEventCommand,
+};
 use crate::application::handlers::{
-    CreateAccountHandler, CreateTransactionHandler, GetAccountHandler, ListAccountsHandler,
-    ListTransactionsHandler,
+    CreateAccountHandler, CreateBalanceSnapshotHandler, CreateLedgerEventHandler,
+    GetAccountBalanceHandler, GetAccountHandler, ListAccountsHandler, ListLedgerEventsHandler,
 };
 use crate::application::queries::{
-    GetAccountByNumberQuery, GetAccountQuery, GetTransactionsByAccountQuery, ListAccountsQuery,
-    ListTransactionsQuery,
+    GetAccountBalanceQuery, GetAccountByNumberQuery, GetAccountQuery, ListAccountsQuery,
+    ListLedgerEventsQuery,
 };
 use crate::domain::{
-    Account, AccountRepository, DomainResult, Transaction, TransactionRepository,
-    TransactionService,
+    Account, AccountBalance, AccountBalanceRepository, AccountRepository, DomainResult,
+    LedgerEvent, LedgerEventRepository,
 };
 use std::sync::Arc;
 
 /// Mediator pattern implementation for command and query dispatching
 pub struct Mediator {
     create_account_handler: CreateAccountHandler,
-    create_transaction_handler: CreateTransactionHandler,
+    create_ledger_event_handler: CreateLedgerEventHandler,
+    create_balance_snapshot_handler: CreateBalanceSnapshotHandler,
     get_account_handler: GetAccountHandler,
+    get_account_balance_handler: GetAccountBalanceHandler,
     list_accounts_handler: ListAccountsHandler,
-    list_transactions_handler: ListTransactionsHandler,
+    list_ledger_events_handler: ListLedgerEventsHandler,
 }
 
 impl Mediator {
     pub fn new(
         account_repository: Arc<dyn AccountRepository>,
-        transaction_repository: Arc<dyn TransactionRepository>,
+        event_repository: Arc<dyn LedgerEventRepository>,
+        balance_repository: Arc<dyn AccountBalanceRepository>,
     ) -> Self {
-        let transaction_service = Arc::new(TransactionService::new(
-            account_repository.clone(),
-            transaction_repository.clone(),
-        ));
-
         Self {
             create_account_handler: CreateAccountHandler::new(account_repository.clone()),
-            create_transaction_handler: CreateTransactionHandler::new(transaction_service),
+            create_ledger_event_handler: CreateLedgerEventHandler::new(event_repository.clone()),
+            create_balance_snapshot_handler: CreateBalanceSnapshotHandler::new(
+                event_repository.clone(),
+                balance_repository.clone(),
+            ),
             get_account_handler: GetAccountHandler::new(account_repository.clone()),
-            list_accounts_handler: ListAccountsHandler::new(account_repository.clone()),
-            list_transactions_handler: ListTransactionsHandler::new(transaction_repository),
+            get_account_balance_handler: GetAccountBalanceHandler::new(
+                event_repository.clone(),
+                balance_repository,
+            ),
+            list_accounts_handler: ListAccountsHandler::new(account_repository),
+            list_ledger_events_handler: ListLedgerEventsHandler::new(event_repository),
         }
     }
 
@@ -49,11 +57,18 @@ impl Mediator {
         self.create_account_handler.handle(command).await
     }
 
-    pub async fn send_create_transaction(
+    pub async fn send_create_ledger_event(
         &self,
-        command: CreateTransactionCommand,
-    ) -> DomainResult<Transaction> {
-        self.create_transaction_handler.handle(command).await
+        command: CreateLedgerEventCommand,
+    ) -> DomainResult<LedgerEvent> {
+        self.create_ledger_event_handler.handle(command).await
+    }
+
+    pub async fn send_create_balance_snapshot(
+        &self,
+        command: CreateBalanceSnapshotCommand,
+    ) -> DomainResult<AccountBalance> {
+        self.create_balance_snapshot_handler.handle(command).await
     }
 
     // Query handlers
@@ -68,23 +83,21 @@ impl Mediator {
         self.get_account_handler.handle_by_number(query).await
     }
 
+    pub async fn send_get_account_balance(
+        &self,
+        query: GetAccountBalanceQuery,
+    ) -> DomainResult<AccountBalance> {
+        self.get_account_balance_handler.handle(query).await
+    }
+
     pub async fn send_list_accounts(&self, query: ListAccountsQuery) -> DomainResult<Vec<Account>> {
         self.list_accounts_handler.handle(query).await
     }
 
-    pub async fn send_list_transactions(
+    pub async fn send_list_ledger_events(
         &self,
-        query: ListTransactionsQuery,
-    ) -> DomainResult<Vec<Transaction>> {
-        self.list_transactions_handler.handle(query).await
-    }
-
-    pub async fn send_get_transactions_by_account(
-        &self,
-        query: GetTransactionsByAccountQuery,
-    ) -> DomainResult<Vec<Transaction>> {
-        self.list_transactions_handler
-            .handle_by_account(query)
-            .await
+        query: ListLedgerEventsQuery,
+    ) -> DomainResult<Vec<LedgerEvent>> {
+        self.list_ledger_events_handler.handle(query).await
     }
 }

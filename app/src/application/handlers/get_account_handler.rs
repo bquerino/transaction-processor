@@ -52,8 +52,7 @@ mod tests {
         let mut mock_repo = MockAccountRepo::new();
 
         let account_number = AccountNumber::new("ACC001".to_string()).unwrap();
-        let balance = Money::new(1000).unwrap();
-        let mut account = Account::new(account_number, "Test Account".to_string(), balance);
+        let mut account = Account::new(account_number, "Test Account".to_string());
         account.id = Some(1);
 
         let account_clone = account.clone();
