@@ -26,9 +26,4 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(transactions -> accounts (from_account_id));
-
-diesel::allow_tables_to_appear_in_same_query!(
-    accounts,
-    transactions,
-);
+diesel::allow_tables_to_appear_in_same_query!(accounts, transactions,);

@@ -60,6 +60,45 @@ transaction-processor/
 
 ## How to Run Locally
 
+### Quick Start (Recommended)
+
+The easiest way to get started is using the provided Makefile:
+
+```bash
+# Complete setup (first time)
+make setup
+
+# Run the application
+make run
+
+# Stop PostgreSQL
+make stop
+```
+
+For all available commands, run:
+```bash
+make help
+```
+
+### Alternative: Automated Setup Script
+
+You can also use the setup script directly:
+
+```bash
+./setup.sh
+```
+
+This script will:
+- Check prerequisites (Rust, Docker, Diesel CLI)
+- Start PostgreSQL with docker compose
+- Create the `.env` file
+- Run database migrations
+- Build the application
+
+### Manual Setup
+
+If you prefer to set up manually, follow these steps:
+
 ### 1. Start the PostgreSQL Database
 
 Navigate to the `infra` directory and start the PostgreSQL container:
