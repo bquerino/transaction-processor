@@ -1,6 +1,6 @@
-# Transaction Processor - Ledger Application
+# Transaction Processor - Event-Sourced Ledger REST API
 
-A Rust-based ledger application using Diesel ORM and PostgreSQL for managing accounts and transactions.
+A Rust-based event-sourced ledger application with REST API using Axum, Diesel ORM, and PostgreSQL for managing accounts and financial transactions.
 
 ## Architecture
 
@@ -129,24 +129,28 @@ Here's how a "Create Account" request flows through the architecture:
    └─> Proper error handling with domain-specific errors
 ```
 
-### Database Schema
+### Database Schema (Event-Sourcing)
 
 #### Accounts Table
 - `id`: Primary key (auto-increment)
 - `account_number`: Unique account identifier
 - `account_name`: Name of the account holder
-- `balance`: Current balance (stored as bigint for precision)
 - `created_at`: Timestamp of account creation
 - `updated_at`: Timestamp of last update
 
-#### Transactions Table
+#### Ledger Events Table (Append-Only)
 - `id`: Primary key (auto-increment)
-- `from_account_id`: Source account (nullable for deposits)
-- `to_account_id`: Destination account (nullable for withdrawals)
-- `amount`: Transaction amount (must be positive)
-- `transaction_type`: Type of transaction (e.g., deposit, withdrawal, transfer)
-- `description`: Optional transaction description
-- `created_at`: Timestamp of transaction
+- `account_id`: Reference to account
+- `event_type`: "DEBIT" or "CREDIT"
+- `amount`: Event amount (must be positive)
+- `description`: Optional event description
+- `created_at`: Timestamp of event
+
+#### Account Balances Table (Snapshots)
+- `id`: Primary key (auto-increment)
+- `account_id`: Reference to account
+- `balance`: Balance snapshot value
+- `snapshot_at`: Timestamp of snapshot
 
 ## Prerequisites
 
@@ -245,11 +249,13 @@ Build the application:
 cargo build
 ```
 
-Run the application:
+Run the REST API server:
 
 ```bash
 cargo run
 ```
+
+The server will start on `http://0.0.0.0:3000`
 
 For production builds:
 ```bash
@@ -257,11 +263,30 @@ cargo build --release
 ./target/release/transaction-processor
 ```
 
+## Testing the API
+
+```bash
+# Create an account
+curl -X POST http://localhost:3000/accounts \
+  -H "Content-Type: application/json" \
+  -d '{"account_number": "ACC001", "account_name": "Main Account"}'
+
+# Create a CREDIT event (deposit)
+curl -X POST http://localhost:3000/events \
+  -H "Content-Type: application/json" \
+  -d '{"account_id": 1, "event_type": "CREDIT", "amount": 5000, "description": "Initial deposit"}'
+
+# Check balance
+curl http://localhost:3000/accounts/1/balance
+```
+
+See [API_DOCUMENTATION.md](API_DOCUMENTATION.md) for complete API reference.
+
 ## Development
 
 ### Running Tests
 
-The project includes 14 comprehensive unit tests covering domain entities, handlers, and services:
+The project includes 17 comprehensive unit tests covering domain entities, handlers, and event-sourcing logic:
 
 ```bash
 cargo test
@@ -273,10 +298,10 @@ make test
 ```
 
 **Test Coverage**:
-- Domain entity tests (9 tests)
-- Command handler tests (2 tests)
-- Query handler tests (1 test)
-- Domain service tests (2 tests)
+- Domain entity tests (Account, LedgerEvent, AccountBalance)
+- Command handler tests (CreateAccount, CreateLedgerEvent, CreateBalanceSnapshot)
+- Query handler tests (GetAccount, GetAccountBalance)
+- Event-sourcing logic tests
 
 Tests use **mockall** for mocking repository dependencies.
 
@@ -302,15 +327,24 @@ diesel migration generate <migration_name>
 
 This creates a new directory in `migrations/` with `up.sql` and `down.sql` files.
 
-## Available Operations
+## Available REST API Operations
 
-The application provides the following core operations:
+The application provides the following REST API endpoints:
 
-- **Create Account**: Create a new account with initial balance
-- **Create Transaction**: Record a new transaction (deposit, withdrawal, transfer)
-- **Get Account Balance**: Retrieve the current balance of an account
-- **List Accounts**: Get all accounts
-- **List Transactions**: Get all transactions
+### Accounts
+- **POST /accounts**: Create a new account
+- **GET /accounts/:id**: Get account by ID
+- **GET /accounts**: List all accounts
+- **GET /accounts/:id/balance**: Get calculated account balance
+
+### Ledger Events (Event-Sourcing)
+- **POST /events**: Create DEBIT or CREDIT event
+- **GET /events**: List all events (optional ?account_id filter)
+
+### Balance Snapshots
+- **POST /balances/snapshot**: Create balance snapshot for an account
+
+For detailed API documentation, see [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
 
 ## Stopping the Infrastructure
 
@@ -330,12 +364,14 @@ docker-compose down -v
 ## Technology Stack
 
 - **Language**: Rust 2021 Edition
-- **Architecture**: Domain-Driven Design (DDD)
-- **Patterns**: Mediator, CQRS, Repository
+- **Web Framework**: Axum 0.7 (REST API)
+- **Architecture**: Domain-Driven Design (DDD) + Event Sourcing
+- **Patterns**: Mediator, CQRS, Repository, Event Sourcing
 - **ORM**: Diesel 2.3
 - **Database**: PostgreSQL 16
 - **Connection Pooling**: R2D2
 - **Async Runtime**: Tokio
+- **HTTP Server**: Tower + Tower-HTTP
 - **Logging**: tracing + tracing-subscriber
 - **Error Handling**: thiserror + anyhow
 - **Testing**: mockall for mocking

@@ -1,5 +1,5 @@
 use crate::application::commands::CreateAccountCommand;
-use crate::domain::{Account, AccountNumber, AccountRepository, DomainResult, Money};
+use crate::domain::{Account, AccountNumber, AccountRepository, DomainResult};
 use std::sync::Arc;
 use tracing::{error, info};
 
@@ -14,13 +14,12 @@ impl CreateAccountHandler {
 
     pub async fn handle(&self, command: CreateAccountCommand) -> DomainResult<Account> {
         info!(
-            "Creating account: number={}, name={}, balance={}",
-            command.account_number, command.account_name, command.initial_balance
+            "Creating account: number={}, name={}",
+            command.account_number, command.account_name
         );
 
         // Validate and create value objects
         let account_number = AccountNumber::new(command.account_number)?;
-        let balance = Money::new(command.initial_balance)?;
 
         // Check if account number already exists
         if self
@@ -34,8 +33,8 @@ impl CreateAccountHandler {
             ));
         }
 
-        // Create account entity
-        let account = Account::new(account_number, command.account_name, balance);
+        // Create account entity (no balance - will be calculated from events)
+        let account = Account::new(account_number, command.account_name);
 
         // Validate account
         account.validate()?;
@@ -78,9 +77,7 @@ mod tests {
             .returning(|_| Ok(false));
 
         let account_number = AccountNumber::new("ACC001".to_string()).unwrap();
-        let balance = Money::new(1000).unwrap();
-        let mut expected_account =
-            Account::new(account_number, "Test Account".to_string(), balance);
+        let mut expected_account = Account::new(account_number, "Test Account".to_string());
         expected_account.id = Some(1);
 
         let expected_account_clone = expected_account.clone();
@@ -90,8 +87,7 @@ mod tests {
             .returning(move |_| Ok(expected_account_clone.clone()));
 
         let handler = CreateAccountHandler::new(Arc::new(mock_repo));
-        let command =
-            CreateAccountCommand::new("ACC001".to_string(), "Test Account".to_string(), 1000);
+        let command = CreateAccountCommand::new("ACC001".to_string(), "Test Account".to_string());
 
         let result = handler.handle(command).await;
 
@@ -110,8 +106,7 @@ mod tests {
             .returning(|_| Ok(true));
 
         let handler = CreateAccountHandler::new(Arc::new(mock_repo));
-        let command =
-            CreateAccountCommand::new("ACC001".to_string(), "Test Account".to_string(), 1000);
+        let command = CreateAccountCommand::new("ACC001".to_string(), "Test Account".to_string());
 
         let result = handler.handle(command).await;
 

@@ -1,4 +1,4 @@
-use crate::domain::{Account, AccountNumber, AccountRepository, DomainError, DomainResult, Money};
+use crate::domain::{Account, AccountNumber, AccountRepository, DomainError, DomainResult};
 use crate::models;
 use crate::schema;
 use async_trait::async_trait;
@@ -24,7 +24,6 @@ impl AccountRepository for DieselAccountRepository {
         let new_account = models::NewAccount {
             account_number: account.account_number.value().to_string(),
             account_name: account.account_name.clone(),
-            balance: account.balance.value(),
         };
 
         let mut conn = self.pool.get().map_err(|e| {
@@ -47,7 +46,6 @@ impl AccountRepository for DieselAccountRepository {
             id: Some(saved.id),
             account_number: AccountNumber::new(saved.account_number)?,
             account_name: saved.account_name,
-            balance: Money::new(saved.balance)?,
             created_at: Some(saved.created_at),
             updated_at: Some(saved.updated_at),
         })
@@ -79,7 +77,6 @@ impl AccountRepository for DieselAccountRepository {
             id: Some(account.id),
             account_number: AccountNumber::new(account.account_number)?,
             account_name: account.account_name,
-            balance: Money::new(account.balance)?,
             created_at: Some(account.created_at),
             updated_at: Some(account.updated_at),
         })
@@ -115,7 +112,6 @@ impl AccountRepository for DieselAccountRepository {
             id: Some(account.id),
             account_number: AccountNumber::new(account.account_number)?,
             account_name: account.account_name,
-            balance: Money::new(account.balance)?,
             created_at: Some(account.created_at),
             updated_at: Some(account.updated_at),
         })
@@ -144,7 +140,6 @@ impl AccountRepository for DieselAccountRepository {
                     id: Some(account.id),
                     account_number: AccountNumber::new(account.account_number)?,
                     account_name: account.account_name,
-                    balance: Money::new(account.balance)?,
                     created_at: Some(account.created_at),
                     updated_at: Some(account.updated_at),
                 })
@@ -166,10 +161,7 @@ impl AccountRepository for DieselAccountRepository {
         })?;
 
         let updated = diesel::update(dsl::accounts.find(account_id))
-            .set((
-                dsl::account_name.eq(&account.account_name),
-                dsl::balance.eq(account.balance.value()),
-            ))
+            .set(dsl::account_name.eq(&account.account_name))
             .returning(models::Account::as_returning())
             .get_result(&mut conn)
             .map_err(|e| {
@@ -183,7 +175,6 @@ impl AccountRepository for DieselAccountRepository {
             id: Some(updated.id),
             account_number: AccountNumber::new(updated.account_number)?,
             account_name: updated.account_name,
-            balance: Money::new(updated.balance)?,
             created_at: Some(updated.created_at),
             updated_at: Some(updated.updated_at),
         })
